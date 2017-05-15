@@ -12,6 +12,10 @@ public class GameHandler : MonoBehaviour {
 
     float elapsedTime;
     Entity heldEntity;
+
+    Vector3 startingPosition; // World space
+    Vector3 startingMousePosition; // Screen space
+    Surface startingSurface; // in case of failiure, we put it back here
         
     void Update () {
         // MOUSE DOWN
@@ -23,7 +27,12 @@ public class GameHandler : MonoBehaviour {
             Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
             int layerMask = 1 << 9; // Entity layer
             if (Physics.Raycast(ray, out hit, 100, layerMask))
-                heldEntity = hit.collider.GetComponentInParent<Entity>();
+            {
+                heldEntity = hit.collider.GetComponent<Entity>();
+
+                startingPosition = heldEntity.targetPosition;
+                startingMousePosition = Input.mousePosition;
+            }
         }
 
         // MOUSE HELD
@@ -31,7 +40,7 @@ public class GameHandler : MonoBehaviour {
         {
             elapsedTime += Time.deltaTime;
 
-            if (elapsedTime > 0.2) {
+            if (elapsedTime > 0.2 || (Input.mousePosition - startingMousePosition).magnitude > 10) {
                 RaycastHit hit;
                 Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
                 int layerMask = 1 << 8; // Surface layer
@@ -45,14 +54,15 @@ public class GameHandler : MonoBehaviour {
         {
             elapsedTime += Time.deltaTime;
 
-            if (elapsedTime < 0.2)
+            if (elapsedTime < 0.2 && (Input.mousePosition - startingMousePosition).magnitude < 10)
                 heldEntity.Tap(Input.mousePosition);
 
             RaycastHit hit;
             Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
             int layerMask = 1 << 8; // Surface layer
             if (Physics.Raycast(ray, out hit, 100, layerMask))
-                hit.collider.GetComponentInParent<Surface>().InsertEntity(heldEntity, hit.point);
+                if (!hit.collider.GetComponentInParent<Surface>().InsertEntity(heldEntity, hit.point))
+                    heldEntity.targetPosition = startingPosition;
 
             heldEntity = null;
         }

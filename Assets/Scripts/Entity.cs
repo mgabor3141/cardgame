@@ -7,9 +7,15 @@ public abstract class Entity : MonoBehaviour
     public Vector3 targetPosition;
     public Surface surface;
 
+    // hmmm...
+    public abstract void Initialize(bool facingUp, Surface surface, Texture front, Texture back);
+
     public abstract void Tap(Vector2 pos);
 
-    public abstract void FlyTo(Vector3 pos);
+    public virtual void FlyTo(Vector3 pos)
+    {
+        targetPosition = pos;
+    }
 
     public void Start()
     {

@@ -6,6 +6,9 @@ public abstract class Surface : MonoBehaviour
 {
     public List<Entity> entities;
 
+    public enum ForceFacingOptions { None, Up, Down };
+    public ForceFacingOptions ForceFacing;
+
     protected abstract bool CanTakeEntity();
 
     protected virtual void PlaceNewEntity(Entity entity, Vector3 hitPos)
@@ -24,7 +27,26 @@ public abstract class Surface : MonoBehaviour
         {
             entity.surface.RemoveEntity(entity);
             entity.surface = this;
+
+            // this is ugly, TODO
+            if (entity.GetType() == typeof(Card))
+            {
+                Card card = (Card)entity;
+                switch (ForceFacing)
+                {
+                    case ForceFacingOptions.Up:
+                        card.facingUp = true;
+                        break;
+                    case ForceFacingOptions.Down:
+                        card.facingUp = false;
+                        break;
+                }
+
+                entity = card;
+            }
+
             PlaceNewEntity(entity, hitPos);
+
             return true;
         }
         return false;

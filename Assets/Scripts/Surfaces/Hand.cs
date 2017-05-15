@@ -4,9 +4,11 @@ using UnityEngine;
 
 public class Hand : Surface
 {
+    public int size = 10;
+
     protected override bool CanTakeEntity()
     {
-        return entities.Count < 10;
+        return entities.Count < size;
     }
 
     protected override void PlaceNewEntity(Entity entity, Vector3 hitPos)
@@ -30,7 +32,7 @@ public class Hand : Surface
         float width = GetComponent<Renderer>().bounds.size.x;
         foreach (Entity e in entities)
         {
-            float horizontalPos = width * ((float) entities.IndexOf(e) / (float) entities.Count - 0.5f) + width / (float) entities.Count / 2;
+            float horizontalPos = transform.position.x + width * ((float) entities.IndexOf(e) / entities.Count - 0.5f) + width / entities.Count / 2;
             e.FlyTo(new Vector3(horizontalPos, transform.position.y + 0.1f, transform.position.z));
         }
     }
