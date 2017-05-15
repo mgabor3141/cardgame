@@ -1,0 +1,13 @@
+lastUpgrade=00938a
+proj.pluginVersion=0.9.38a
+proj.AppId=921979250691
+and.BundleId=com.mgabor.cardgame
+proj.classDir=Assets
+proj.ConstantsClassName=GPGSIds
+and.ResourceData=%3c%3fxml+version%3d%221.0%22+encoding%3d%22utf-8%22%3f%3e%0a%3cresources%3e%0a%3cstring+name%3d%22app_id%22%3e921979250691%3c%2fstring%3e%0a%3cstring+name%3d%22package_name%22%3ecom.mgabor.cardgame%3c%2fstring%3e%0a%3c%2fresources%3e
+and.ClientId=
+android.SetupDone=true
+ios.ClientId=921979250691-9793s7mfj56d0ncoj1vvr8vbvcelfonh.apps.googleusercontent.com
+ios.ResourceData=%23define+CLIENT_ID+%40%22921979250691-9793s7mfj56d0ncoj1vvr8vbvcelfonh.apps.googleusercontent.com%22
+ios.BundleId=com.mgabor.cardgame
+ios.SetupDone=true
