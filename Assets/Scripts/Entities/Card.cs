@@ -12,8 +12,8 @@ public class Card : Entity {
         Debug.Log("Card flipped");
     }
 
-    public override void Drag(Vector2 pos)
+    public override void FlyTo(Vector3 pos)
     {
-        targetPosition = container.GetTargetPosition(pos);
+        targetPosition = pos;
     }
 }
