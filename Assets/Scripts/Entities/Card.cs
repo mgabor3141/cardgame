@@ -9,6 +9,7 @@ public class Card : Entity {
     public override void Tap(Vector2 pos)
     {
         facingUp = !facingUp;
+        Debug.Log("Card flipped");
     }
 
     public override void Drag(Vector2 pos)

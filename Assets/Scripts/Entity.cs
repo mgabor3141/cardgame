@@ -10,10 +10,15 @@ public abstract class Entity : MonoBehaviour
     public abstract void Tap(Vector2 pos);
 
     public abstract void Drag(Vector2 pos);
+    
+    public void Start()
+    {
+        if (container == null)
+            container = new Table();
+    }
 
-    // Update is called once per frame
     public void Update()
     {
-        transform.position = (targetPosition - transform.position) / 2;
+        transform.position = transform.position + (targetPosition - transform.position) / 2;
     }
 }

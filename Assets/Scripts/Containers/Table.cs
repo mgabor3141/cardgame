@@ -3,7 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-public class Table : MonoBehaviour, IContainer
+public class Table : IContainer
 {
     public bool isEntityInContainer(Vector2 pos)
     {
@@ -14,22 +14,15 @@ public class Table : MonoBehaviour, IContainer
     {
         RaycastHit hit;
         Ray ray = Camera.main.ScreenPointToRay(screenPos);
-        if(Physics.Raycast(ray, out hit, 100))
+        int layerMask = 1 << 8; // Container layer
+        if (Physics.Raycast(ray, out hit, 100, layerMask))
         {
             Vector3 directionNormal = ray.direction;
             directionNormal.Normalize();
-            return hit.point;// - directionNormal * 1;
+            Vector3 scaledNormal = hit.normal;
+            scaledNormal.Scale(new Vector3(0.1f, 0.1f, 0.1f));
+            return hit.point + scaledNormal;// - directionNormal * 1;
         }
         throw new Exception("This should never happen");
     }
-
-    // Use this for initialization
-    void Start () {
-		
-	}
-	
-	// Update is called once per frame
-	void Update () {
-		
-	}
 }
