@@ -7,6 +7,8 @@ public abstract class Entity : MonoBehaviour
     public Vector3 targetPosition;
     public Surface surface;
 
+    private bool resting = false;
+
     // hmmm...
     public abstract void Initialize(bool facingUp, Surface surface, Texture front, Texture back);
 
@@ -14,6 +16,7 @@ public abstract class Entity : MonoBehaviour
 
     public virtual void FlyTo(Vector3 pos)
     {
+        resting = false;
         targetPosition = pos;
     }
 
@@ -24,6 +27,14 @@ public abstract class Entity : MonoBehaviour
 
     public void Update()
     {
+        if (resting) return;
+
+        if ((targetPosition - transform.position).magnitude < 0.0005)
+        {
+            resting = true;
+            return;
+        }
+
         transform.position = transform.position + (targetPosition - transform.position) * 0.2f;
     }
 }

@@ -55,15 +55,18 @@ public class GameHandler : MonoBehaviour {
             elapsedTime += Time.deltaTime;
 
             if (elapsedTime < 0.2 && (Input.mousePosition - startingMousePosition).magnitude < 10)
+            {
                 heldEntity.Tap(Input.mousePosition);
-
-            RaycastHit hit;
-            Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
-            int layerMask = 1 << 8; // Surface layer
-            if (Physics.Raycast(ray, out hit, 100, layerMask))
-                if (!hit.collider.GetComponentInParent<Surface>().InsertEntity(heldEntity, hit.point))
-                    heldEntity.targetPosition = startingPosition;
-
+            }
+            else
+            {
+                RaycastHit hit;
+                Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
+                int layerMask = 1 << 8; // Surface layer
+                if (Physics.Raycast(ray, out hit, 100, layerMask))
+                    if (!hit.collider.GetComponentInParent<Surface>().InsertEntity(heldEntity, hit.point))
+                        heldEntity.targetPosition = startingPosition;
+            }
             heldEntity = null;
         }
     }
