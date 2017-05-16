@@ -1,12 +1,9 @@
-﻿using System;
-using System.Collections;
-using System.Collections.Generic;
-using UnityEngine;
+﻿using UnityEngine;
 
-public class Card : Entity {
-    Texture front, back;
+public class Card : Entity, IFlippable {
+    Texture _front, _back;
     private bool _facingUp;
-    public bool facingUp {
+    public bool FacingUp {
         get
         {
             return _facingUp;
@@ -15,26 +12,35 @@ public class Card : Entity {
         set
         {
             _facingUp = value;
-            if (facingUp)
-                GetComponent<Renderer>().material.mainTexture = front;
+            if (FacingUp)
+                GetComponent<Renderer>().material.mainTexture = _front;
             else
-                GetComponent<Renderer>().material.mainTexture = back;
+                GetComponent<Renderer>().material.mainTexture = _back;
         }
     }
 
-    public override void Initialize(bool facingUp, Surface surface, Texture front, Texture back)
+    public void Initialize(bool facingUp, IContainer container, Texture front, Texture back)
     {
-        this.surface = surface;
-        this.front = front;
-        this.back = back;
-        this.facingUp = facingUp;
+        GetComponent<Movement>().Container = container;
+        _front = front;
+        _back = back;
+        FacingUp = facingUp;
     }
 
-    public override void Tap(Vector2 pos)
+    // Event handlers
+
+    public override void Click(Vector3 hitPos)
     {
-        if (surface.ForceFacing != Surface.ForceFacingOptions.None) return;
-        facingUp = !facingUp;
+        if (GetComponent<Movement>().Container.ForceFacing == true) return;
+        FacingUp = !FacingUp;
 
         transform.position = transform.position + new Vector3(0, 0.2f, 0);
+        GetComponent<Movement>().Wake();
+    }
+
+    public override Entity StartDrag(Vector3 hitPos)
+    {
+        GetComponent<Movement>().Container.RemoveEntity(this);
+        return this;
     }
 }

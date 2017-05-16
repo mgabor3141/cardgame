@@ -1,73 +1,122 @@
-﻿using System;
-using System.Collections;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using UnityEngine;
 
-public class GameHandler : MonoBehaviour {
+public class GameHandler : MonoBehaviour
+{
     public List<Entity> entities;
-    
-    void Start () {
 
-	}
+    private static float CLICK_TIME = 0.15f;
+    private static float DELAYED_DRAG_TIME = 0.5f;
+    private static float DRAG_START_DISTANCE = 10;
 
-    float elapsedTime;
-    Entity heldEntity;
+    private float elapsedTime = 0;
+    private Entity grabbed = null;
+    Entity hovering = null;
 
-    Vector3 startingPosition; // World space
-    Vector3 startingMousePosition; // Screen space
-    Surface startingSurface; // in case of failiure, we put it back here
-        
-    void Update () {
-        // MOUSE DOWN
-        if (Input.GetMouseButtonDown(0))
+    // In case of failure, we drop it back here
+    private Vector3 startingMousePosition; // Screen space
+
+    void Update()
+    {
+        // Timer
+        elapsedTime += Time.deltaTime;
+
+        // What is under the cursor/finger?
+        Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
+        RaycastHit[] hits = Physics.RaycastAll(ray, 100, 1 << 8); // Entity Layer
+        System.Array.Sort(hits, (x, y) => x.distance.CompareTo(y.distance));
+
+        // Mouse clicked, start the clock
+        if (Input.GetMouseButtonDown(0) && hits.Length > 0)
         {
             elapsedTime = 0;
 
-            RaycastHit hit;
-            Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
-            int layerMask = 1 << 9; // Entity layer
-            if (Physics.Raycast(ray, out hit, 100, layerMask))
-            {
-                heldEntity = hit.collider.GetComponent<Entity>();
-
-                startingPosition = heldEntity.targetPosition;
-                startingMousePosition = Input.mousePosition;
-            }
+            startingMousePosition = Input.mousePosition;
         }
 
-        // MOUSE HELD
-        if (Input.GetMouseButton(0) && heldEntity)
+        // Click (on quick mouse release)
+        // Topmost object gets clicked
+        if (Input.GetMouseButtonUp(0) && grabbed == null && hits.Length > 0 &&
+            elapsedTime < CLICK_TIME)
         {
-            elapsedTime += Time.deltaTime;
-
-            if (elapsedTime > 0.2 || (Input.mousePosition - startingMousePosition).magnitude > 10) {
-                RaycastHit hit;
-                Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
-                int layerMask = 1 << 8; // Surface layer
-                if (Physics.Raycast(ray, out hit, 100, layerMask))
-                    heldEntity.FlyTo(hit.point + new Vector3(0, 1, 0));
-            }
+            RaycastHit hit = hits[0];
+            hit.collider.GetComponent<Entity>().Click(hit.point);
         }
 
-        // MOUSE RELEASED
-        if (Input.GetMouseButtonUp(0) && heldEntity)
+        // StartDelayedDrag (mouse down and hasn't moved for a while)
+        // Topmost object gets dragged
+        if (Input.GetMouseButton(0) && grabbed == null && hits.Length > 0 &&
+            elapsedTime >= DELAYED_DRAG_TIME)
         {
-            elapsedTime += Time.deltaTime;
+            RaycastHit hit = hits[0];
+            grabbed = hit.collider.GetComponent<Entity>().StartDelayedDrag(hit.point);
+            if (grabbed != null)
+                grabbed.gameObject.layer = 9;
 
-            if (elapsedTime < 0.2 && (Input.mousePosition - startingMousePosition).magnitude < 10)
+        }
+
+        // StartDrag (movement)
+        // Topmost object gets dragged
+        if (Input.GetMouseButton(0) && grabbed == null && hits.Length > 0 &&
+            (Input.mousePosition - startingMousePosition).magnitude > DRAG_START_DISTANCE)
+        {
+
+            RaycastHit hit = hits[0];
+            grabbed = hit.collider.GetComponent<Entity>().StartDrag(hit.point);
+            if (grabbed != null)
+                grabbed.gameObject.layer = 9;
+        }
+
+        // Hover (holding something over something else)
+        // HoverOff for when we stop hovering it
+        // We hover the topmost entity that responds (so not cards for example)
+        if (Input.GetMouseButton(0) && grabbed)
+        {
+            Entity newhovering = null;
+            foreach (RaycastHit hit in hits)
             {
-                heldEntity.Tap(Input.mousePosition);
+                if (hit.collider.GetComponent<Entity>().Hover(grabbed, hit.point))
+                {
+                    newhovering = hit.collider.GetComponent<Entity>();
+                    break;
+                }
             }
-            else
+
+            if (newhovering != hovering && hovering != null)
+                hovering.HoverOff();
+
+            hovering = newhovering;
+        }
+
+        // Drop (release something over something)
+        // We try from the topmost object, if nothing takes the object we put it back
+        if (Input.GetMouseButtonUp(0) && grabbed && hits.Length > 0)
+        {
+            grabbed.gameObject.layer = 8;
+
+            bool dropSuccessful = false;
+            foreach (RaycastHit hit in hits)
             {
-                RaycastHit hit;
-                Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
-                int layerMask = 1 << 8; // Surface layer
-                if (Physics.Raycast(ray, out hit, 100, layerMask))
-                    if (!hit.collider.GetComponentInParent<Surface>().InsertEntity(heldEntity, hit.point))
-                        heldEntity.targetPosition = startingPosition;
+                if (hit.collider.GetComponent<Entity>().Drop(grabbed, hit.point))
+                {
+                    // If drop is successful, we're good
+                    dropSuccessful = true;
+                    break;
+                }
             }
-            heldEntity = null;
+
+            if (!dropSuccessful)
+            {
+                // If not we put it back to where it came from
+                Ray ray2 = Camera.main.ScreenPointToRay(startingMousePosition);
+                RaycastHit[] hits2 = Physics.RaycastAll(ray2, 100, 1 << 8); // Entity Layer
+                foreach (RaycastHit hit2 in hits2)
+                {
+                    if (hit2.collider.GetComponent<Entity>().Drop(grabbed, hit2.point))
+                        break;
+                }
+            }
+            grabbed = null;
         }
     }
 }

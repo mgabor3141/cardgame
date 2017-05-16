@@ -1,40 +1,11 @@
-﻿using System.Collections;
-using System.Collections.Generic;
-using UnityEngine;
+﻿using UnityEngine;
 
 public abstract class Entity : MonoBehaviour
 {
-    public Vector3 targetPosition;
-    public Surface surface;
-
-    private bool resting = false;
-
-    // hmmm...
-    public abstract void Initialize(bool facingUp, Surface surface, Texture front, Texture back);
-
-    public abstract void Tap(Vector2 pos);
-
-    public virtual void FlyTo(Vector3 pos)
-    {
-        resting = false;
-        targetPosition = pos;
-    }
-
-    public void Start()
-    {
-
-    }
-
-    public void Update()
-    {
-        if (resting) return;
-
-        if ((targetPosition - transform.position).magnitude < 0.0005)
-        {
-            resting = true;
-            return;
-        }
-
-        transform.position = transform.position + (targetPosition - transform.position) * 0.2f;
-    }
+    public virtual void Click(Vector3 hitPos) { }
+    public virtual Entity StartDrag(Vector3 hitPos) { return null; }
+    public virtual Entity StartDelayedDrag(Vector3 hitPos) { return null; }
+    public virtual bool Hover(Entity entity, Vector3 hitPos) { return false; }
+    public virtual void HoverOff() { }
+    public virtual bool Drop(Entity entity, Vector3 hitPos) { return false; }
 }
