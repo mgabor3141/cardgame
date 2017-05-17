@@ -58,6 +58,11 @@ public class Card : Entity, IFlippable
         GetComponent<Movement>().Wake();
     }
 
+    public override float GetNetworkSendInterval()
+    {
+        return 0.02f;
+    }
+
     // Event handlers
 
     public override void Click(Vector3 hitPos)

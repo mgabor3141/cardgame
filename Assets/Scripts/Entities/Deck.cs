@@ -7,7 +7,7 @@ public enum DeckColor { Blue, Red };
 
 public class Deck : Entity, IFlippable, IContainer
 {
-    public List<Card> cards = new List<Card>();
+    public List<Card> _cards = new List<Card>();
 
     public bool FacingUp
     {
@@ -18,7 +18,7 @@ public class Deck : Entity, IFlippable, IContainer
 
         set
         {
-            foreach (Card card in cards)
+            foreach (Card card in _cards)
             {
                 card.FacingUp = value;
             }
@@ -150,7 +150,7 @@ public class Deck : Entity, IFlippable, IContainer
 
         Card card = (Card)entity;
         card.GetComponent<Movement>().Container = this;
-        cards.Add(card);
+        _cards.Add(card);
         UpdateDeck();
         return true;
     }
@@ -158,8 +158,8 @@ public class Deck : Entity, IFlippable, IContainer
     [ClientRpc]
     public void RpcStartDrag()
     {
-        Card cardToTake = cards[cards.Count - 1];
-        cards.RemoveAt(cards.Count - 1);
+        Card cardToTake = _cards[_cards.Count - 1];
+        _cards.RemoveAt(_cards.Count - 1);
 
         cardToTake.GetComponent<Movement>().ContainerID = new NetworkInstanceId();
         cardToTake.transform.parent = null;
@@ -178,29 +178,29 @@ public class Deck : Entity, IFlippable, IContainer
 
         card.GetComponent<Movement>().Container = null;
 
-        cards.Remove(card);
+        _cards.Remove(card);
 
         UpdateDeck();
     }
 
     private void UpdateDeck()
     {
-        if (cards.Count >= 2)
+        if (_cards.Count >= 2)
         {
-            cards[cards.Count - 2].gameObject.SetActive(true);
-            cards[cards.Count - 2].GetComponent<Movement>().TargetPosition = transform.position + new Vector3(0, 0.005f * cards.Count / 2, 0);
+            _cards[_cards.Count - 2].gameObject.SetActive(true);
+            _cards[_cards.Count - 2].GetComponent<Movement>().TargetPosition = transform.position + new Vector3(0, 0.005f * _cards.Count / 2, 0);
         }
 
-        if (cards.Count >= 1)
+        if (_cards.Count >= 1)
         {
-            cards[0].gameObject.SetActive(true);
-            cards[0].GetComponent<Movement>().TargetPosition = transform.position + new Vector3(0, 0.005f, 0);
+            _cards[0].gameObject.SetActive(true);
+            _cards[0].GetComponent<Movement>().TargetPosition = transform.position + new Vector3(0, 0.005f, 0);
         }
 
-        if (cards.Count >= 1)
+        if (_cards.Count >= 1)
         {
-            cards[cards.Count - 1].gameObject.SetActive(true);
-            cards[cards.Count - 1].GetComponent<Movement>().TargetPosition = transform.position + new Vector3(0, 0.005f * cards.Count, 0);
+            _cards[_cards.Count - 1].gameObject.SetActive(true);
+            _cards[_cards.Count - 1].GetComponent<Movement>().TargetPosition = transform.position + new Vector3(0, 0.005f * _cards.Count, 0);
         }
     }
 
@@ -230,7 +230,6 @@ public class Deck : Entity, IFlippable, IContainer
     {
         return this;
     }
-
     public override void StartDelayedDrag(Vector3 hitPos)
     {
         GetComponent<Movement>().Container.RemoveEntity(this);
@@ -238,11 +237,13 @@ public class Deck : Entity, IFlippable, IContainer
 
     public override Entity DragTarget(Vector3 hitPos)
     {
-        return cards[cards.Count - 1];
+        if (_cards.Count > 0)
+            return _cards[_cards.Count - 1];
+        return null;
     }
-
     public override void StartDrag(Vector3 hitPos)
     {
-        RpcStartDrag();
+        if (_cards.Count > 0)
+            RpcStartDrag();
     }
 }
