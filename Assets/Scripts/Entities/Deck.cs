@@ -32,12 +32,12 @@ public class Deck : Entity, IFlippable, IContainer
     public void RpcSetContainer(NetworkInstanceId container)
     {
         GetComponent<Movement>().ContainerID = container;
+
+        UpdateDeck();
     }
 
     public void Initialize(NetworkInstanceId container, DeckColor deckColor)
     {
-        RpcSetContainer(container);
-
         string color;
 
         switch (deckColor)
@@ -108,8 +108,9 @@ public class Deck : Entity, IFlippable, IContainer
         CreateCard("queen_of_spades", color);
         CreateCard("red_joker", color);
 
+        RpcSetContainer(container);
+
         //Shuffle();
-        UpdateDeck();
     }
 
     private void CreateCard(string cardname, string color)
@@ -209,28 +210,39 @@ public class Deck : Entity, IFlippable, IContainer
         //Shuffle();
     }
 
-    public override bool Drop(Entity entity, Vector3 hitPos)
+    public override bool DropAccepted(Entity entity, Vector3 hitPos)
     {
-        if (entity.GetType() != typeof(Card))
-            return false;
-
-        ((Card)entity).RpcSetLayer(9);
-        ((Card)entity).RpcSetParent(netId);
-
-        RpcAddEntity(entity.netId, hitPos);
-        return true;
+        return (entity.GetType() != typeof(Card));
     }
 
-    public override Entity StartDelayedDrag(Vector3 hitPos)
+    public override void Drop(Entity entity, Vector3 hitPos)
     {
-        GetComponent<Movement>().Container.RemoveEntity(this);
+        if (DropAccepted(entity, hitPos))
+        {
+            ((Card)entity).RpcSetLayer(9);
+            ((Card)entity).RpcSetParent(netId);
+
+            RpcAddEntity(entity.netId, hitPos);
+        }
+    }
+
+    public override Entity DelayedDragTarget(Vector3 hitPos)
+    {
         return this;
     }
-    
-    public override Entity StartDrag(Vector3 hitPos)
+
+    public override void StartDelayedDrag(Vector3 hitPos)
     {
-        Entity card = cards[cards.Count - 1];
+        GetComponent<Movement>().Container.RemoveEntity(this);
+    }
+
+    public override Entity DragTarget(Vector3 hitPos)
+    {
+        return cards[cards.Count - 1];
+    }
+
+    public override void StartDrag(Vector3 hitPos)
+    {
         RpcStartDrag();
-        return card;
     }
 }

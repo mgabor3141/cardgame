@@ -34,16 +34,26 @@ public class Table : Entity, IContainer {
 
     // Event handlers
 
-    public override bool Hover(Entity entity, Vector3 hitPos)
+    public override bool HoverAnswered(Entity entity, Vector3 hitPos)
     {
-        entity.GetComponent<Movement>().TargetPosition = hitPos + new Vector3(0, 1, 0);
         return true;
     }
 
-    public override bool Drop(Entity entity, Vector3 hitPos)
+    public override void Hover(Entity entity, Vector3 hitPos)
     {
-        if (_entities.Count == size) return false;
-        RpcAddEntity(entity.netId, hitPos);
-        return true;
+        entity.GetComponent<Movement>().TargetPosition = hitPos + new Vector3(0, 1, 0);
+    }
+
+    public override bool DropAccepted(Entity entity, Vector3 hitPos)
+    {
+        return (_entities.Count != size);
+    }
+
+    public override void Drop(Entity entity, Vector3 hitPos)
+    {
+        if (DropAccepted(entity, hitPos))
+        {
+            RpcAddEntity(entity.netId, hitPos);
+        }
     }
 }

@@ -71,14 +71,20 @@ public class Hand : Entity, IContainer
 
     // Event handlers
 
-    public override bool Hover(Entity entity, Vector3 hitPos)
+    public override bool HoverAnswered(Entity entity, Vector3 hitPos)
     {
-        if (_entities.Count >= size) return false;
-        RpcRearrange(WorldToHand(hitPos.x));
-        entity.GetComponent<Movement>().TargetPosition =
-            new Vector3(HandToWorld(WorldToHand(hitPos.x), _entities.Count + 1),
-            transform.position.y + 1, transform.position.z);
-        return true;
+        return (_entities.Count < size - 1);
+    }
+
+    public override void Hover(Entity entity, Vector3 hitPos)
+    {
+        if (HoverAnswered(entity, hitPos))
+        {
+            RpcRearrange(WorldToHand(hitPos.x));
+            entity.GetComponent<Movement>().TargetPosition =
+                new Vector3(HandToWorld(WorldToHand(hitPos.x), _entities.Count + 1),
+                transform.position.y + 1, transform.position.z);
+        }
     }
 
     public override void HoverOff()
@@ -86,10 +92,16 @@ public class Hand : Entity, IContainer
         RpcRearrange(-1);
     }
 
-    public override bool Drop(Entity entity, Vector3 hitPos)
+    public override bool DropAccepted(Entity entity, Vector3 hitPos)
     {
-        if (_entities.Count >= size) return false;
-        RpcAddEntity(entity.netId, hitPos);
-        return true;
+        return HoverAnswered(entity, hitPos);
+    }
+
+    public override void Drop(Entity entity, Vector3 hitPos)
+    {
+        if (DropAccepted(entity, hitPos))
+        {
+            RpcAddEntity(entity.netId, hitPos);
+        }
     }
 }

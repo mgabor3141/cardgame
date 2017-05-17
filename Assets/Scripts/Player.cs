@@ -7,12 +7,7 @@ public class Player : NetworkBehaviour
     private static float DELAYED_DRAG_TIME = 0.5f;
     private static float DRAG_START_DISTANCE = 10;
 
-    [SyncVar]
-    public NetworkInstanceId grabbed = new NetworkInstanceId();
-    [SyncVar]
-    public bool hoveringSuccess;
-    [SyncVar]
-    public bool dropSuccess;
+    private NetworkInstanceId grabbed = new NetworkInstanceId();
 
     private float elapsedTime = 0;
     private Entity hovering = null; 
@@ -61,8 +56,12 @@ public class Player : NetworkBehaviour
         {
             RaycastHit hit = hits[0];
             CmdStartDelayedDrag(hit.point, gameObject, hit.collider.GetComponent<Entity>().netId);
-            if (!grabbed.IsEmpty())
+            Entity target = hit.collider.GetComponent<Entity>().DelayedDragTarget(hit.point);
+            if (target != null)
+            {
+                grabbed = target.netId;
                 ClientScene.FindLocalObject(grabbed).gameObject.layer = 9;
+            }
 
         }
 
@@ -74,8 +73,12 @@ public class Player : NetworkBehaviour
 
             RaycastHit hit = hits[0];
             CmdStartDrag(hit.point, gameObject, hit.collider.GetComponent<Entity>().netId);
-            if (!grabbed.IsEmpty())
+            Entity target = hit.collider.GetComponent<Entity>().DragTarget(hit.point);
+            if (target != null)
+            {
+                grabbed = target.netId;
                 ClientScene.FindLocalObject(grabbed).gameObject.layer = 9;
+            }
         }
 
         // Hover (holding something over something else)
@@ -86,9 +89,8 @@ public class Player : NetworkBehaviour
             Entity newhovering = null;
             foreach (RaycastHit hit in hits)
             {
-                hoveringSuccess = false;
                 CmdHover(grabbed, hit.point, gameObject, hit.collider.GetComponent<Entity>().netId);
-                if (hoveringSuccess)
+                if (hit.collider.GetComponent<Entity>().HoverAnswered(ClientScene.FindLocalObject(grabbed).GetComponent<Entity>(), hit.point))
                 {
                     newhovering = hit.collider.GetComponent<Entity>();
                     break;
@@ -107,10 +109,11 @@ public class Player : NetworkBehaviour
         {
             ClientScene.FindLocalObject(grabbed).gameObject.layer = 8;
 
-            dropSuccess = false;
+            bool dropSuccess = false;
             foreach (RaycastHit hit in hits)
             {
                 CmdDrop(grabbed, hit.point, gameObject, hit.collider.GetComponent<Entity>().netId);
+                dropSuccess = hit.collider.GetComponent<Entity>().DropAccepted(ClientScene.FindLocalObject(grabbed).GetComponent<Entity>(), hit.point);
                 if (dropSuccess)
                     break;
             }
@@ -123,6 +126,7 @@ public class Player : NetworkBehaviour
                 foreach (RaycastHit hit2 in hits2)
                 {
                     CmdDrop(grabbed, hit2.point, gameObject, hit2.collider.GetComponent<Entity>().netId);
+                    dropSuccess = hit2.collider.GetComponent<Entity>().DropAccepted(ClientScene.FindLocalObject(grabbed).GetComponent<Entity>(), hit2.point);
                     if (dropSuccess)
                         break;
                 }
@@ -142,19 +146,19 @@ public class Player : NetworkBehaviour
     [Command]
     private void CmdStartDrag(Vector3 hitPos, GameObject caller, NetworkInstanceId target)
     {
-        caller.GetComponent<Player>().grabbed = NetworkServer.FindLocalObject(target).GetComponent<Entity>().StartDrag(hitPos).netId;
+        NetworkServer.FindLocalObject(target).GetComponent<Entity>().StartDrag(hitPos);
     }
 
     [Command]
     private void CmdStartDelayedDrag(Vector3 hitPos, GameObject caller, NetworkInstanceId target)
     {
-        caller.GetComponent<Player>().grabbed = NetworkServer.FindLocalObject(target).GetComponent<Entity>().StartDelayedDrag(hitPos).netId;
+        NetworkServer.FindLocalObject(target).GetComponent<Entity>().StartDelayedDrag(hitPos);
     }
 
     [Command]
     private void CmdHover(NetworkInstanceId netId, Vector3 hitPos, GameObject caller, NetworkInstanceId target)
     {
-        caller.GetComponent<Player>().hoveringSuccess = NetworkServer.FindLocalObject(target).GetComponent<Entity>().Hover(NetworkServer.FindLocalObject(netId).GetComponent<Entity>(), hitPos);
+        NetworkServer.FindLocalObject(target).GetComponent<Entity>().Hover(NetworkServer.FindLocalObject(netId).GetComponent<Entity>(), hitPos);
     }
 
     [Command]
@@ -166,6 +170,6 @@ public class Player : NetworkBehaviour
     [Command]
     private void CmdDrop(NetworkInstanceId netId, Vector3 hitPos, GameObject caller, NetworkInstanceId target)
     {
-        caller.GetComponent<Player>().dropSuccess = NetworkServer.FindLocalObject(target).GetComponent<Entity>().Drop(NetworkServer.FindLocalObject(netId).GetComponent<Entity>(), hitPos);
+        NetworkServer.FindLocalObject(target).GetComponent<Entity>().Drop(NetworkServer.FindLocalObject(netId).GetComponent<Entity>(), hitPos);
     }
 }

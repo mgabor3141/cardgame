@@ -9,7 +9,7 @@ public class Spot : Entity, IContainer
     public bool ForceFacing { get; set; }
 
     public Entity _entity;
-    
+
     private void CreateDeck()
     {
         GameObject deck = Instantiate(Resources.Load<GameObject>("Prefabs/Deck"), transform.position + new Vector3(0, 0.05f, 0), Quaternion.identity);
@@ -17,33 +17,56 @@ public class Spot : Entity, IContainer
         deck.GetComponent<Deck>().Initialize(this.netId, SpawnedDeckColor);
     }
 
-public bool AddEntity(Entity entity, Vector3 hitPos)
+    [ClientRpc]
+    public void RpcAddEntity(NetworkInstanceId entity, Vector3 hitPos)
     {
-        if (_entity != null) return false;
-        _entity = entity;
-        entity.GetComponent<Movement>().Container = this;
-        entity.GetComponent<Movement>().TargetPosition = transform.position + new Vector3(0, 0.05f, 0);
-        return true;
+        AddEntity(ClientScene.FindLocalObject(entity).GetComponent<Entity>(), hitPos);
+    }
+    public bool AddEntity(Entity entity, Vector3 hitPos) {
+        if (HoverAnswered(entity, hitPos))
+        {
+            _entity = entity;
+            entity.GetComponent<Movement>().Container = this;
+            entity.GetComponent<Movement>().TargetPosition = transform.position + new Vector3(0, 0.05f, 0);
+            return true;
+        }
+        return false;
     }
 
-    public void RemoveEntity(Entity entity)
+    [ClientRpc]
+    public void RpcRemoveEntity(NetworkInstanceId entity)
     {
+        RemoveEntity(ClientScene.FindLocalObject(entity).GetComponent<Entity>());
+    }
+    public void RemoveEntity(Entity entity)
+    { 
         entity.GetComponent<Movement>().ContainerID = new NetworkInstanceId();
         _entity = null;
     }
 
     // Event handlers
 
-    public override bool Hover(Entity entity, Vector3 hitPos)
+    public override bool HoverAnswered(Entity entity, Vector3 hitPos)
     {
-        if (_entity != null) return false;
-        entity.GetComponent<Movement>().TargetPosition = transform.position + new Vector3(0, 1, 0);
-        return true;
+        return (_entity == null);
     }
 
-    public override bool Drop(Entity entity, Vector3 hitPos)
+    public override void Hover(Entity entity, Vector3 hitPos)
     {
-        return AddEntity(entity, hitPos);
+        if (HoverAnswered(entity, hitPos))
+        {
+            entity.GetComponent<Movement>().TargetPosition = transform.position + new Vector3(0, 1, 0);
+        }
+    }
+
+    public override bool DropAccepted(Entity entity, Vector3 hitPos)
+    {
+        return HoverAnswered(entity, hitPos);
+    }
+
+    public override void Drop(Entity entity, Vector3 hitPos)
+    {
+        RpcAddEntity(entity.netId, hitPos);
     }
 
     public override void Click(Vector3 hitPos)

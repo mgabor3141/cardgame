@@ -49,20 +49,30 @@ public class Card : Entity, IFlippable
         FacingUp = facingUp;
     }
 
-    // Event handlers
-
-    public override void Click(Vector3 hitPos)
+    [ClientRpc]
+    public void RpcFlip()
     {
-        if (GetComponent<Movement>().Container.ForceFacing == true) return;
         FacingUp = !FacingUp;
 
         transform.position = transform.position + new Vector3(0, 0.2f, 0);
         GetComponent<Movement>().Wake();
     }
 
-    public override Entity StartDrag(Vector3 hitPos)
+    // Event handlers
+
+    public override void Click(Vector3 hitPos)
+    {
+        //if (GetComponent<Movement>().Container.ForceFacing == true) return;
+        RpcFlip();
+    }
+
+    public override Entity DragTarget(Vector3 hitPos)
+    {
+        return this;
+    }
+
+    public override void StartDrag(Vector3 hitPos)
     {
         GetComponent<Movement>().Container.RemoveEntity(this);
-        return this;
     }
 }
