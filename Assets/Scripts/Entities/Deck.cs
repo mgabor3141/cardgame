@@ -196,7 +196,6 @@ public class Deck : Entity, IFlippable, IContainer
 
     public override Entity StartDrag(Vector3 hitPos)
     {
-        Debug.Log("Deck StartDrag");
         Card card = cards[cards.Count - 1];
         cards.RemoveAt(cards.Count - 1);
 

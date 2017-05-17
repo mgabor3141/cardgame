@@ -16,6 +16,11 @@ public class GameHandler : MonoBehaviour
     // In case of failure, we drop it back here
     private Vector3 startingMousePosition; // Screen space
 
+    void Awake()
+    {
+        Application.targetFrameRate = 60;
+    }
+
     void Update()
     {
         // Timer
