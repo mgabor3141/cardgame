@@ -1,12 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Networking;
 
 public enum DeckColor { Blue, Red };
 
 public class Deck : Entity, IFlippable, IContainer
 {
-
     public List<Card> cards = new List<Card>();
 
     public bool FacingUp
@@ -28,22 +28,28 @@ public class Deck : Entity, IFlippable, IContainer
     public AutoFacingOptions AutoFacing { get; set; }
     public bool ForceFacing { get; set; }
 
-    public void Initialize(IContainer container, DeckColor deckColor)
+    [ClientRpc]
+    public void RpcSetContainer(NetworkInstanceId container)
     {
-        GetComponent<Movement>().Container = container;
+        GetComponent<Movement>().ContainerID = container;
 
+        UpdateDeck();
+    }
+
+    public void Initialize(NetworkInstanceId container, DeckColor deckColor)
+    {
         string color;
 
         switch (deckColor)
         {
             case DeckColor.Blue:
-                color = "blue";
+                color = "back_blue";
                 break;
             case DeckColor.Red:
-                color = "red";
+                color = "back_red";
                 break;
             default:
-                color = "blue";
+                color = "back_blue";
                 break;
         }
 
@@ -102,20 +108,22 @@ public class Deck : Entity, IFlippable, IContainer
         CreateCard("queen_of_spades", color);
         CreateCard("red_joker", color);
 
-        Shuffle();
-        UpdateDeck();
+        RpcSetContainer(container);
+
+        //Shuffle();
     }
 
     private void CreateCard(string cardname, string color)
     {
         GameObject newcard = Instantiate(Resources.Load<GameObject>("Prefabs/Card"), transform.position, Quaternion.identity);
-        newcard.layer = 9;
-        newcard.transform.parent = this.transform;
-        newcard.GetComponent<Card>().Initialize(false, this, Resources.Load<Texture>("Textures/" + cardname), Resources.Load<Texture>("Textures/back-" + color));
-        cards.Add(newcard.GetComponent<Card>());
+        NetworkServer.Spawn(newcard);
+        newcard.GetComponent<Card>().RpcSetLayer(9);
+        newcard.GetComponent<Card>().RpcSetParent(netId);
+        newcard.GetComponent<Card>().RpcInitialize(false, netId, cardname, color);
+        RpcAddEntity(newcard.GetComponent<Card>().netId, new Vector3());
     }
 
-    public void Shuffle()
+    /*public void Shuffle()
     {
         // Fisher-Yates shuffle
         int n = cards.Count;
@@ -128,8 +136,13 @@ public class Deck : Entity, IFlippable, IContainer
             cards[n] = value;
         }
         UpdateDeck();
-    }
+    }*/
 
+    [ClientRpc]
+    public void RpcAddEntity(NetworkInstanceId entityId, Vector3 hitPos)
+    {
+        AddEntity(ClientScene.FindLocalObject(entityId).GetComponent<Entity>(), hitPos);
+    }
     public bool AddEntity(Entity entity, Vector3 hitPos)
     {
         if (entity.GetType() != typeof(Card))
@@ -142,6 +155,23 @@ public class Deck : Entity, IFlippable, IContainer
         return true;
     }
 
+    [ClientRpc]
+    public void RpcStartDrag()
+    {
+        Card cardToTake = cards[cards.Count - 1];
+        cards.RemoveAt(cards.Count - 1);
+
+        cardToTake.GetComponent<Movement>().ContainerID = new NetworkInstanceId();
+        cardToTake.transform.parent = null;
+
+        UpdateDeck();
+    }
+
+    [ClientRpc]
+    public void RpcRemoveEntity(NetworkInstanceId entityId, Vector3 hitPos)
+    {
+        RemoveEntity(ClientScene.FindLocalObject(entityId).GetComponent<Entity>());
+    }
     public void RemoveEntity(Entity entity)
     {
         Card card = (Card)entity;
@@ -175,35 +205,44 @@ public class Deck : Entity, IFlippable, IContainer
     }
 
     // Event handlers
-
     public override void Click(Vector3 hitPos)
     {
-        Shuffle();
+        //Shuffle();
     }
 
-    public override bool Drop(Entity entity, Vector3 hitPos)
+    public override bool DropAccepted(Entity entity, Vector3 hitPos)
     {
-        entity.gameObject.layer = 9;
-        entity.transform.parent = this.transform;
-        return AddEntity(entity, hitPos);
+        return (entity.GetType() != typeof(Card));
     }
 
-    public override Entity StartDelayedDrag(Vector3 hitPos)
+    public override void Drop(Entity entity, Vector3 hitPos)
     {
-        GetComponent<Movement>().Container.RemoveEntity(this);
+        if (DropAccepted(entity, hitPos))
+        {
+            ((Card)entity).RpcSetLayer(9);
+            ((Card)entity).RpcSetParent(netId);
+
+            RpcAddEntity(entity.netId, hitPos);
+        }
+    }
+
+    public override Entity DelayedDragTarget(Vector3 hitPos)
+    {
         return this;
     }
 
-    public override Entity StartDrag(Vector3 hitPos)
+    public override void StartDelayedDrag(Vector3 hitPos)
     {
-        Card card = cards[cards.Count - 1];
-        cards.RemoveAt(cards.Count - 1);
+        GetComponent<Movement>().Container.RemoveEntity(this);
+    }
 
-        card.GetComponent<Movement>().Container = null;
-        card.transform.parent = null;
+    public override Entity DragTarget(Vector3 hitPos)
+    {
+        return cards[cards.Count - 1];
+    }
 
-        UpdateDeck();
-
-        return (Entity)card;
+    public override void StartDrag(Vector3 hitPos)
+    {
+        RpcStartDrag();
     }
 }

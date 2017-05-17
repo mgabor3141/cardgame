@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Networking;
 
 public class Hand : Entity, IContainer
 {
@@ -21,6 +22,11 @@ public class Hand : Entity, IContainer
         return transform.position.x + width * ((float)index / count - 0.5f) + width / count / 2;
     }
 
+    [ClientRpc]
+    public void RpcAddEntity(NetworkInstanceId entityId, Vector3 hitPos)
+    {
+        AddEntity(ClientScene.FindLocalObject(entityId).GetComponent<Entity>(), hitPos);
+    }
     public bool AddEntity(Entity entity, Vector3 hitPos)
     {
         if (_entities.Count >= size) return false;
@@ -41,6 +47,11 @@ public class Hand : Entity, IContainer
         Rearrange();
     }
 
+    [ClientRpc]
+    private void RpcRearrange(int hoverAt)
+    {
+        Rearrange(hoverAt);
+    }
     private void Rearrange(int hoverAt = -1)
     {
         int count = _entities.Count;
@@ -60,23 +71,37 @@ public class Hand : Entity, IContainer
 
     // Event handlers
 
-    public override bool Hover(Entity entity, Vector3 hitPos)
+    public override bool HoverAnswered(Entity entity, Vector3 hitPos)
     {
-        if (_entities.Count >= size) return false;
-        Rearrange(WorldToHand(hitPos.x));
-        entity.GetComponent<Movement>().TargetPosition =
-            new Vector3(HandToWorld(WorldToHand(hitPos.x), _entities.Count + 1),
-            transform.position.y + 1, transform.position.z);
-        return true;
+        return (_entities.Count < size - 1);
+    }
+
+    public override void Hover(Entity entity, Vector3 hitPos)
+    {
+        if (HoverAnswered(entity, hitPos))
+        {
+            RpcRearrange(WorldToHand(hitPos.x));
+            entity.GetComponent<Movement>().TargetPosition =
+                new Vector3(HandToWorld(WorldToHand(hitPos.x), _entities.Count + 1),
+                transform.position.y + 1, transform.position.z);
+        }
     }
 
     public override void HoverOff()
     {
-        Rearrange();
+        RpcRearrange(-1);
     }
 
-    public override bool Drop(Entity entity, Vector3 hitPos)
+    public override bool DropAccepted(Entity entity, Vector3 hitPos)
     {
-        return AddEntity(entity, hitPos);
+        return HoverAnswered(entity, hitPos);
+    }
+
+    public override void Drop(Entity entity, Vector3 hitPos)
+    {
+        if (DropAccepted(entity, hitPos))
+        {
+            RpcAddEntity(entity.netId, hitPos);
+        }
     }
 }
