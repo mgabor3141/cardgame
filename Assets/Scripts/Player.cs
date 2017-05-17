@@ -1,10 +1,8 @@
-﻿using System.Collections.Generic;
-using UnityEngine;
+﻿using UnityEngine;
+using UnityEngine.Networking;
 
-public class GameHandler : MonoBehaviour
+public class Player : NetworkBehaviour
 {
-    public List<Entity> entities;
-
     private static float CLICK_TIME = 0.15f;
     private static float DELAYED_DRAG_TIME = 0.5f;
     private static float DRAG_START_DISTANCE = 10;
@@ -16,13 +14,16 @@ public class GameHandler : MonoBehaviour
     // In case of failure, we drop it back here
     private Vector3 startingMousePosition; // Screen space
 
-    void Awake()
+    public override void OnStartLocalPlayer()
     {
-        Application.targetFrameRate = 60;
+        GameObject.Find("StartingObjects").gameObject.transform.parent = transform;
     }
 
     void Update()
     {
+        if (!isLocalPlayer)
+            return;
+
         // Timer
         elapsedTime += Time.deltaTime;
 

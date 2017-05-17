@@ -1,12 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Networking;
 
 public enum DeckColor { Blue, Red };
 
 public class Deck : Entity, IFlippable, IContainer
 {
-
     public List<Card> cards = new List<Card>();
 
     public bool FacingUp
@@ -37,81 +37,83 @@ public class Deck : Entity, IFlippable, IContainer
         switch (deckColor)
         {
             case DeckColor.Blue:
-                color = "blue";
+                color = "back_blue";
                 break;
             case DeckColor.Red:
-                color = "red";
+                color = "back_red";
                 break;
             default:
-                color = "blue";
+                color = "back_blue";
                 break;
         }
 
-        CreateCard("10_of_clubs", color);
-        CreateCard("10_of_diamonds", color);
-        CreateCard("10_of_hearts", color);
-        CreateCard("10_of_spades", color);
-        CreateCard("2_of_clubs", color);
-        CreateCard("2_of_diamonds", color);
-        CreateCard("2_of_hearts", color);
-        CreateCard("2_of_spades", color);
-        CreateCard("3_of_clubs", color);
-        CreateCard("3_of_diamonds", color);
-        CreateCard("3_of_hearts", color);
-        CreateCard("3_of_spades", color);
-        CreateCard("4_of_clubs", color);
-        CreateCard("4_of_diamonds", color);
-        CreateCard("4_of_hearts", color);
-        CreateCard("4_of_spades", color);
-        CreateCard("5_of_clubs", color);
-        CreateCard("5_of_diamonds", color);
-        CreateCard("5_of_hearts", color);
-        CreateCard("5_of_spades", color);
-        CreateCard("6_of_clubs", color);
-        CreateCard("6_of_diamonds", color);
-        CreateCard("6_of_hearts", color);
-        CreateCard("6_of_spades", color);
-        CreateCard("7_of_clubs", color);
-        CreateCard("7_of_diamonds", color);
-        CreateCard("7_of_hearts", color);
-        CreateCard("7_of_spades", color);
-        CreateCard("8_of_clubs", color);
-        CreateCard("8_of_diamonds", color);
-        CreateCard("8_of_hearts", color);
-        CreateCard("8_of_spades", color);
-        CreateCard("9_of_clubs", color);
-        CreateCard("9_of_diamonds", color);
-        CreateCard("9_of_hearts", color);
-        CreateCard("9_of_spades", color);
-        CreateCard("ace_of_clubs", color);
-        CreateCard("ace_of_diamonds", color);
-        CreateCard("ace_of_hearts", color);
-        CreateCard("ace_of_spades", color);
-        CreateCard("black_joker", color);
-        CreateCard("jack_of_clubs", color);
-        CreateCard("jack_of_diamonds", color);
-        CreateCard("jack_of_hearts", color);
-        CreateCard("jack_of_spades", color);
-        CreateCard("king_of_clubs", color);
-        CreateCard("king_of_diamonds", color);
-        CreateCard("king_of_hearts", color);
-        CreateCard("king_of_spades", color);
-        CreateCard("queen_of_clubs", color);
-        CreateCard("queen_of_diamonds", color);
-        CreateCard("queen_of_hearts", color);
-        CreateCard("queen_of_spades", color);
-        CreateCard("red_joker", color);
+        CmdCreateCard("10_of_clubs", color);
+        CmdCreateCard("10_of_diamonds", color);
+        CmdCreateCard("10_of_hearts", color);
+        CmdCreateCard("10_of_spades", color);
+        CmdCreateCard("2_of_clubs", color);
+        CmdCreateCard("2_of_diamonds", color);
+        CmdCreateCard("2_of_hearts", color);
+        CmdCreateCard("2_of_spades", color);
+        CmdCreateCard("3_of_clubs", color);
+        CmdCreateCard("3_of_diamonds", color);
+        CmdCreateCard("3_of_hearts", color);
+        CmdCreateCard("3_of_spades", color);
+        CmdCreateCard("4_of_clubs", color);
+        CmdCreateCard("4_of_diamonds", color);
+        CmdCreateCard("4_of_hearts", color);
+        CmdCreateCard("4_of_spades", color);
+        CmdCreateCard("5_of_clubs", color);
+        CmdCreateCard("5_of_diamonds", color);
+        CmdCreateCard("5_of_hearts", color);
+        CmdCreateCard("5_of_spades", color);
+        CmdCreateCard("6_of_clubs", color);
+        CmdCreateCard("6_of_diamonds", color);
+        CmdCreateCard("6_of_hearts", color);
+        CmdCreateCard("6_of_spades", color);
+        CmdCreateCard("7_of_clubs", color);
+        CmdCreateCard("7_of_diamonds", color);
+        CmdCreateCard("7_of_hearts", color);
+        CmdCreateCard("7_of_spades", color);
+        CmdCreateCard("8_of_clubs", color);
+        CmdCreateCard("8_of_diamonds", color);
+        CmdCreateCard("8_of_hearts", color);
+        CmdCreateCard("8_of_spades", color);
+        CmdCreateCard("9_of_clubs", color);
+        CmdCreateCard("9_of_diamonds", color);
+        CmdCreateCard("9_of_hearts", color);
+        CmdCreateCard("9_of_spades", color);
+        CmdCreateCard("ace_of_clubs", color);
+        CmdCreateCard("ace_of_diamonds", color);
+        CmdCreateCard("ace_of_hearts", color);
+        CmdCreateCard("ace_of_spades", color);
+        CmdCreateCard("black_joker", color);
+        CmdCreateCard("jack_of_clubs", color);
+        CmdCreateCard("jack_of_diamonds", color);
+        CmdCreateCard("jack_of_hearts", color);
+        CmdCreateCard("jack_of_spades", color);
+        CmdCreateCard("king_of_clubs", color);
+        CmdCreateCard("king_of_diamonds", color);
+        CmdCreateCard("king_of_hearts", color);
+        CmdCreateCard("king_of_spades", color);
+        CmdCreateCard("queen_of_clubs", color);
+        CmdCreateCard("queen_of_diamonds", color);
+        CmdCreateCard("queen_of_hearts", color);
+        CmdCreateCard("queen_of_spades", color);
+        CmdCreateCard("red_joker", color);
 
         Shuffle();
         UpdateDeck();
     }
 
-    private void CreateCard(string cardname, string color)
+    [Command]
+    private void CmdCreateCard(string cardname, string color)
     {
         GameObject newcard = Instantiate(Resources.Load<GameObject>("Prefabs/Card"), transform.position, Quaternion.identity);
         newcard.layer = 9;
         newcard.transform.parent = this.transform;
-        newcard.GetComponent<Card>().Initialize(false, this, Resources.Load<Texture>("Textures/" + cardname), Resources.Load<Texture>("Textures/back-" + color));
+        newcard.GetComponent<Card>().Initialize(false, this, cardname, color);
+        NetworkServer.SpawnWithClientAuthority(newcard, GameObject.Find("NetworkManager").GetComponent<NetworkManager>().client.connection.playerControllers[0].gameObject);
         cards.Add(newcard.GetComponent<Card>());
     }
 

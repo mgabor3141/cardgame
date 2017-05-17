@@ -1,10 +1,12 @@
 ﻿using UnityEngine;
+using UnityEngine.Networking;
 
-public class Movement : MonoBehaviour
+public class Movement : NetworkBehaviour
 {
     private bool _resting = false;
     public void Wake() { _resting = false; }
 
+    [SyncVar]
     private Vector3 _targetPosition;
     public Vector3 TargetPosition
     {

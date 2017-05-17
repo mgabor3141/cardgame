@@ -1,6 +1,7 @@
 ﻿using UnityEngine;
+using UnityEngine.Networking;
 
-public abstract class Entity : MonoBehaviour
+public abstract class Entity : NetworkBehaviour
 {
     public virtual void Click(Vector3 hitPos) { }
     public virtual Entity StartDrag(Vector3 hitPos) { return null; }

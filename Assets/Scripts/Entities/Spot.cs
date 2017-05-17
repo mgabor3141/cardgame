@@ -1,23 +1,14 @@
 ﻿using UnityEngine;
+using UnityEngine.Networking;
 
 public class Spot : Entity, IContainer
 {
-    public bool SpawnWithDeck = false;
-    public DeckColor DeckColor = DeckColor.Blue;
+    public DeckColor SpawnedDeckColor = DeckColor.Blue;
 
     public AutoFacingOptions AutoFacing { get; set; }
     public bool ForceFacing { get; set; }
 
     public Entity _entity;
-
-    void Start()
-    {
-        if (SpawnWithDeck)
-        {
-            GameObject deck = Instantiate(Resources.Load<GameObject>("Prefabs/Deck"), transform.position + new Vector3(0, 0.05f, 0), Quaternion.identity);
-            deck.GetComponent<Deck>().Initialize(this, DeckColor);
-        }
-    }
 
     public bool AddEntity(Entity entity, Vector3 hitPos)
     {
@@ -34,6 +25,15 @@ public class Spot : Entity, IContainer
         _entity = null;
     }
 
+    [Command]
+    private void CmdCreateDeck()
+    {
+        GameObject deck = Instantiate(Resources.Load<GameObject>("Prefabs/Deck"), transform.position + new Vector3(0, 0.05f, 0), Quaternion.identity);
+        NetworkServer.SpawnWithClientAuthority(deck, GameObject.Find("NetworkManager").GetComponent<NetworkManager>().client.connection.playerControllers[0].gameObject);
+        deck.GetComponent<Deck>().Initialize(this, SpawnedDeckColor);
+        NetworkServer.Spawn(deck);
+    }
+
     // Event handlers
 
     public override bool Hover(Entity entity, Vector3 hitPos)
@@ -46,5 +46,13 @@ public class Spot : Entity, IContainer
     public override bool Drop(Entity entity, Vector3 hitPos)
     {
         return AddEntity(entity, hitPos);
+    }
+
+    public override void Click(Vector3 hitPos)
+    {
+        if (_entity == null)
+        {
+            CmdCreateDeck();
+        }
     }
 }

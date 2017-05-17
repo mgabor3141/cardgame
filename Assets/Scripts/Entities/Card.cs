@@ -1,7 +1,11 @@
 ﻿using UnityEngine;
+using UnityEngine.Networking;
 
 public class Card : Entity, IFlippable {
-    Texture _front, _back;
+    [SyncVar]
+    private string _frontTextureName, _backTextureName;
+
+    [SyncVar]
     private bool _facingUp;
     public bool FacingUp {
         get
@@ -13,18 +17,32 @@ public class Card : Entity, IFlippable {
         {
             _facingUp = value;
             if (FacingUp)
-                GetComponent<Renderer>().material.mainTexture = _front;
+                GetComponent<Renderer>().material.mainTexture = Resources.Load<Texture>("Textures/" + _frontTextureName);
             else
-                GetComponent<Renderer>().material.mainTexture = _back;
+                GetComponent<Renderer>().material.mainTexture = Resources.Load<Texture>("Textures/" + _backTextureName);
         }
     }
 
-    public void Initialize(bool facingUp, IContainer container, Texture front, Texture back)
+    public void Initialize(bool facingUp, IContainer container, string frontTextureName, string backTextureName)
     {
         GetComponent<Movement>().Container = container;
-        _front = front;
-        _back = back;
+        _frontTextureName = frontTextureName;
+        _backTextureName = backTextureName;
         FacingUp = facingUp;
+    }
+
+    public void Move(Vector3 position)
+    {
+        Debug.Log("Move");
+        //transform.position = position;
+        CmdMove(position);
+    }
+
+    [Command]
+    private void CmdMove(Vector3 position)
+    {
+        Debug.Log("CmdMove");
+        transform.position = position;
     }
 
     // Event handlers
@@ -34,7 +52,7 @@ public class Card : Entity, IFlippable {
         if (GetComponent<Movement>().Container.ForceFacing == true) return;
         FacingUp = !FacingUp;
 
-        transform.position = transform.position + new Vector3(0, 0.2f, 0);
+        Move(transform.position + new Vector3(0, 0.2f, 0));
         GetComponent<Movement>().Wake();
     }
 
