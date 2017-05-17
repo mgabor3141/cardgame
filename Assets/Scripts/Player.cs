@@ -1,17 +1,18 @@
-﻿using System.Collections.Generic;
-using UnityEngine;
+﻿using UnityEngine;
+using UnityEngine.Networking;
 
-public class GameHandler : MonoBehaviour
+public class Player : NetworkBehaviour
 {
-    public List<Entity> entities;
-
     private static float CLICK_TIME = 0.15f;
     private static float DELAYED_DRAG_TIME = 0.5f;
     private static float DRAG_START_DISTANCE = 10;
 
+    public Entity grabbed = null;
+    public bool hoveringSuccess;
+    public bool dropSuccess;
+
     private float elapsedTime = 0;
-    private Entity grabbed = null;
-    Entity hovering = null;
+    private Entity hovering = null; 
 
     // In case of failure, we drop it back here
     private Vector3 startingMousePosition; // Screen space
@@ -45,7 +46,7 @@ public class GameHandler : MonoBehaviour
             elapsedTime < CLICK_TIME)
         {
             RaycastHit hit = hits[0];
-            hit.collider.GetComponent<Entity>().Click(hit.point);
+            CmdClick(hit.point, hit.collider.GetComponent<Entity>().netId);
         }
 
         // StartDelayedDrag (mouse down and hasn't moved for a while)
@@ -54,7 +55,7 @@ public class GameHandler : MonoBehaviour
             elapsedTime >= DELAYED_DRAG_TIME)
         {
             RaycastHit hit = hits[0];
-            grabbed = hit.collider.GetComponent<Entity>().StartDelayedDrag(hit.point);
+            CmdStartDelayedDrag(hit.point, gameObject, hit.collider.GetComponent<Entity>().netId);
             if (grabbed != null)
                 grabbed.gameObject.layer = 9;
 
@@ -67,7 +68,7 @@ public class GameHandler : MonoBehaviour
         {
 
             RaycastHit hit = hits[0];
-            grabbed = hit.collider.GetComponent<Entity>().StartDrag(hit.point);
+            CmdStartDrag(hit.point, gameObject, hit.collider.GetComponent<Entity>().netId);
             if (grabbed != null)
                 grabbed.gameObject.layer = 9;
         }
@@ -80,7 +81,9 @@ public class GameHandler : MonoBehaviour
             Entity newhovering = null;
             foreach (RaycastHit hit in hits)
             {
-                if (hit.collider.GetComponent<Entity>().Hover(grabbed, hit.point))
+                hoveringSuccess = false;
+                CmdHover(grabbed.netId, hit.point, gameObject, hit.collider.GetComponent<Entity>().netId);
+                if (hoveringSuccess)
                 {
                     newhovering = hit.collider.GetComponent<Entity>();
                     break;
@@ -88,7 +91,7 @@ public class GameHandler : MonoBehaviour
             }
 
             if (newhovering != hovering && hovering != null)
-                hovering.HoverOff();
+                CmdHoverOff(hovering.netId);
 
             hovering = newhovering;
         }
@@ -99,29 +102,65 @@ public class GameHandler : MonoBehaviour
         {
             grabbed.gameObject.layer = 8;
 
-            bool dropSuccessful = false;
+            dropSuccess = false;
             foreach (RaycastHit hit in hits)
             {
-                if (hit.collider.GetComponent<Entity>().Drop(grabbed, hit.point))
-                {
-                    // If drop is successful, we're good
-                    dropSuccessful = true;
+                CmdDrop(grabbed.netId, hit.point, gameObject, hit.collider.GetComponent<Entity>().netId);
+                if (dropSuccess)
                     break;
-                }
             }
 
-            if (!dropSuccessful)
+            if (!dropSuccess)
             {
                 // If not we put it back to where it came from
                 Ray ray2 = Camera.main.ScreenPointToRay(startingMousePosition);
                 RaycastHit[] hits2 = Physics.RaycastAll(ray2, 100, 1 << 8); // Entity Layer
                 foreach (RaycastHit hit2 in hits2)
                 {
-                    if (hit2.collider.GetComponent<Entity>().Drop(grabbed, hit2.point))
+                    CmdDrop(grabbed.netId, hit2.point, gameObject, hit2.collider.GetComponent<Entity>().netId);
+                    if (dropSuccess)
                         break;
                 }
             }
             grabbed = null;
         }
+    }
+
+    // Entity Commands
+
+    [Command]
+    private void CmdClick(Vector3 hitPos, NetworkInstanceId target)
+    {
+        NetworkServer.FindLocalObject(target).GetComponent<Entity>().Click(hitPos);
+    }
+
+    [Command]
+    private void CmdStartDrag(Vector3 hitPos, GameObject caller, NetworkInstanceId target)
+    {
+        caller.GetComponent<Player>().grabbed = NetworkServer.FindLocalObject(target).GetComponent<Entity>().StartDrag(hitPos);
+    }
+
+    [Command]
+    private void CmdStartDelayedDrag(Vector3 hitPos, GameObject caller, NetworkInstanceId target)
+    {
+        caller.GetComponent<Player>().grabbed = NetworkServer.FindLocalObject(target).GetComponent<Entity>().StartDelayedDrag(hitPos);
+    }
+
+    [Command]
+    private void CmdHover(NetworkInstanceId netId, Vector3 hitPos, GameObject caller, NetworkInstanceId target)
+    {
+        caller.GetComponent<Player>().hoveringSuccess = NetworkServer.FindLocalObject(target).GetComponent<Entity>().Hover(NetworkServer.FindLocalObject(netId).GetComponent<Entity>(), hitPos);
+    }
+
+    [Command]
+    private void CmdHoverOff(NetworkInstanceId target)
+    {
+        NetworkServer.FindLocalObject(target).GetComponent<Entity>().HoverOff();
+    }
+
+    [Command]
+    private void CmdDrop(NetworkInstanceId netId, Vector3 hitPos, GameObject caller, NetworkInstanceId target)
+    {
+        caller.GetComponent<Player>().dropSuccess = NetworkServer.FindLocalObject(target).GetComponent<Entity>().Drop(NetworkServer.FindLocalObject(netId).GetComponent<Entity>(), hitPos);
     }
 }

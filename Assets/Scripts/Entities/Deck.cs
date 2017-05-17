@@ -1,12 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Networking;
 
 public enum DeckColor { Blue, Red };
 
 public class Deck : Entity, IFlippable, IContainer
 {
-
     public List<Card> cards = new List<Card>();
 
     public bool FacingUp
@@ -37,13 +37,13 @@ public class Deck : Entity, IFlippable, IContainer
         switch (deckColor)
         {
             case DeckColor.Blue:
-                color = "blue";
+                color = "back_blue";
                 break;
             case DeckColor.Red:
-                color = "red";
+                color = "back_red";
                 break;
             default:
-                color = "blue";
+                color = "back_blue";
                 break;
         }
 
@@ -111,7 +111,8 @@ public class Deck : Entity, IFlippable, IContainer
         GameObject newcard = Instantiate(Resources.Load<GameObject>("Prefabs/Card"), transform.position, Quaternion.identity);
         newcard.layer = 9;
         newcard.transform.parent = this.transform;
-        newcard.GetComponent<Card>().Initialize(false, this, Resources.Load<Texture>("Textures/" + cardname), Resources.Load<Texture>("Textures/back-" + color));
+        newcard.GetComponent<Card>().Initialize(false, this, cardname, color);
+        NetworkServer.Spawn(newcard);
         cards.Add(newcard.GetComponent<Card>());
     }
 
@@ -175,7 +176,6 @@ public class Deck : Entity, IFlippable, IContainer
     }
 
     // Event handlers
-
     public override void Click(Vector3 hitPos)
     {
         Shuffle();
@@ -204,6 +204,6 @@ public class Deck : Entity, IFlippable, IContainer
 
         UpdateDeck();
 
-        return (Entity)card;
+        return card;
     }
 }

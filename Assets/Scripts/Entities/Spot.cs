@@ -1,25 +1,24 @@
 ﻿using UnityEngine;
+using UnityEngine.Networking;
 
 public class Spot : Entity, IContainer
 {
-    public bool SpawnWithDeck = false;
-    public DeckColor DeckColor = DeckColor.Blue;
+    public DeckColor SpawnedDeckColor = DeckColor.Blue;
 
     public AutoFacingOptions AutoFacing { get; set; }
     public bool ForceFacing { get; set; }
 
     public Entity _entity;
-
-    void Start()
+    
+    private void CreateDeck()
     {
-        if (SpawnWithDeck)
-        {
-            GameObject deck = Instantiate(Resources.Load<GameObject>("Prefabs/Deck"), transform.position + new Vector3(0, 0.05f, 0), Quaternion.identity);
-            deck.GetComponent<Deck>().Initialize(this, DeckColor);
-        }
+        GameObject deck = Instantiate(Resources.Load<GameObject>("Prefabs/Deck"), transform.position + new Vector3(0, 0.05f, 0), Quaternion.identity);
+        NetworkServer.Spawn(deck);
+        deck.GetComponent<Deck>().Initialize(this, SpawnedDeckColor);
+        NetworkServer.Spawn(deck);
     }
 
-    public bool AddEntity(Entity entity, Vector3 hitPos)
+public bool AddEntity(Entity entity, Vector3 hitPos)
     {
         if (_entity != null) return false;
         _entity = entity;
@@ -46,5 +45,10 @@ public class Spot : Entity, IContainer
     public override bool Drop(Entity entity, Vector3 hitPos)
     {
         return AddEntity(entity, hitPos);
+    }
+
+    public override void Click(Vector3 hitPos)
+    {
+        CreateDeck();
     }
 }
