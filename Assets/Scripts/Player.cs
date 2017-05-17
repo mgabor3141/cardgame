@@ -7,8 +7,11 @@ public class Player : NetworkBehaviour
     private static float DELAYED_DRAG_TIME = 0.5f;
     private static float DRAG_START_DISTANCE = 10;
 
-    public Entity grabbed = null;
+    [SyncVar]
+    public NetworkInstanceId grabbed = new NetworkInstanceId();
+    [SyncVar]
     public bool hoveringSuccess;
+    [SyncVar]
     public bool dropSuccess;
 
     private float elapsedTime = 0;
@@ -24,6 +27,8 @@ public class Player : NetworkBehaviour
 
     void Update()
     {
+        if (!isLocalPlayer) return;
+
         // Timer
         elapsedTime += Time.deltaTime;
 
@@ -42,7 +47,7 @@ public class Player : NetworkBehaviour
 
         // Click (on quick mouse release)
         // Topmost object gets clicked
-        if (Input.GetMouseButtonUp(0) && grabbed == null && hits.Length > 0 &&
+        if (Input.GetMouseButtonUp(0) && grabbed.IsEmpty() && hits.Length > 0 &&
             elapsedTime < CLICK_TIME)
         {
             RaycastHit hit = hits[0];
@@ -51,38 +56,38 @@ public class Player : NetworkBehaviour
 
         // StartDelayedDrag (mouse down and hasn't moved for a while)
         // Topmost object gets dragged
-        if (Input.GetMouseButton(0) && grabbed == null && hits.Length > 0 &&
+        if (Input.GetMouseButton(0) && grabbed.IsEmpty() && hits.Length > 0 &&
             elapsedTime >= DELAYED_DRAG_TIME)
         {
             RaycastHit hit = hits[0];
             CmdStartDelayedDrag(hit.point, gameObject, hit.collider.GetComponent<Entity>().netId);
-            if (grabbed != null)
-                grabbed.gameObject.layer = 9;
+            if (!grabbed.IsEmpty())
+                ClientScene.FindLocalObject(grabbed).gameObject.layer = 9;
 
         }
 
         // StartDrag (movement)
         // Topmost object gets dragged
-        if (Input.GetMouseButton(0) && grabbed == null && hits.Length > 0 &&
+        if (Input.GetMouseButton(0) && grabbed.IsEmpty() && hits.Length > 0 &&
             (Input.mousePosition - startingMousePosition).magnitude > DRAG_START_DISTANCE)
         {
 
             RaycastHit hit = hits[0];
             CmdStartDrag(hit.point, gameObject, hit.collider.GetComponent<Entity>().netId);
-            if (grabbed != null)
-                grabbed.gameObject.layer = 9;
+            if (!grabbed.IsEmpty())
+                ClientScene.FindLocalObject(grabbed).gameObject.layer = 9;
         }
 
         // Hover (holding something over something else)
         // HoverOff for when we stop hovering it
         // We hover the topmost entity that responds (so not cards for example)
-        if (Input.GetMouseButton(0) && grabbed)
+        if (Input.GetMouseButton(0) && !grabbed.IsEmpty())
         {
             Entity newhovering = null;
             foreach (RaycastHit hit in hits)
             {
                 hoveringSuccess = false;
-                CmdHover(grabbed.netId, hit.point, gameObject, hit.collider.GetComponent<Entity>().netId);
+                CmdHover(grabbed, hit.point, gameObject, hit.collider.GetComponent<Entity>().netId);
                 if (hoveringSuccess)
                 {
                     newhovering = hit.collider.GetComponent<Entity>();
@@ -98,14 +103,14 @@ public class Player : NetworkBehaviour
 
         // Drop (release something over something)
         // We try from the topmost object, if nothing takes the object we put it back
-        if (Input.GetMouseButtonUp(0) && grabbed && hits.Length > 0)
+        if (Input.GetMouseButtonUp(0) && !grabbed.IsEmpty() && hits.Length > 0)
         {
-            grabbed.gameObject.layer = 8;
+            ClientScene.FindLocalObject(grabbed).gameObject.layer = 8;
 
             dropSuccess = false;
             foreach (RaycastHit hit in hits)
             {
-                CmdDrop(grabbed.netId, hit.point, gameObject, hit.collider.GetComponent<Entity>().netId);
+                CmdDrop(grabbed, hit.point, gameObject, hit.collider.GetComponent<Entity>().netId);
                 if (dropSuccess)
                     break;
             }
@@ -117,12 +122,12 @@ public class Player : NetworkBehaviour
                 RaycastHit[] hits2 = Physics.RaycastAll(ray2, 100, 1 << 8); // Entity Layer
                 foreach (RaycastHit hit2 in hits2)
                 {
-                    CmdDrop(grabbed.netId, hit2.point, gameObject, hit2.collider.GetComponent<Entity>().netId);
+                    CmdDrop(grabbed, hit2.point, gameObject, hit2.collider.GetComponent<Entity>().netId);
                     if (dropSuccess)
                         break;
                 }
             }
-            grabbed = null;
+            grabbed = new NetworkInstanceId();
         }
     }
 
@@ -137,13 +142,13 @@ public class Player : NetworkBehaviour
     [Command]
     private void CmdStartDrag(Vector3 hitPos, GameObject caller, NetworkInstanceId target)
     {
-        caller.GetComponent<Player>().grabbed = NetworkServer.FindLocalObject(target).GetComponent<Entity>().StartDrag(hitPos);
+        caller.GetComponent<Player>().grabbed = NetworkServer.FindLocalObject(target).GetComponent<Entity>().StartDrag(hitPos).netId;
     }
 
     [Command]
     private void CmdStartDelayedDrag(Vector3 hitPos, GameObject caller, NetworkInstanceId target)
     {
-        caller.GetComponent<Player>().grabbed = NetworkServer.FindLocalObject(target).GetComponent<Entity>().StartDelayedDrag(hitPos);
+        caller.GetComponent<Player>().grabbed = NetworkServer.FindLocalObject(target).GetComponent<Entity>().StartDelayedDrag(hitPos).netId;
     }
 
     [Command]

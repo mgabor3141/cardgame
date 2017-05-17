@@ -1,13 +1,15 @@
 ﻿using UnityEngine;
 using UnityEngine.Networking;
 
-public class Card : Entity, IFlippable {
+public class Card : Entity, IFlippable
+{
     [SyncVar]
     private string _frontTextureName, _backTextureName;
 
     [SyncVar]
     private bool _facingUp;
-    public bool FacingUp {
+    public bool FacingUp
+    {
         get
         {
             return _facingUp;
@@ -23,9 +25,25 @@ public class Card : Entity, IFlippable {
         }
     }
 
-    public void Initialize(bool facingUp, IContainer container, string frontTextureName, string backTextureName)
+    [ClientRpc]
+    public void RpcSetParent(NetworkInstanceId parent)
     {
-        GetComponent<Movement>().Container = container;
+        if (parent.IsEmpty())
+            transform.parent = null;
+        else
+            transform.parent = ClientScene.FindLocalObject(parent).transform;
+    }
+
+    [ClientRpc]
+    public void RpcSetLayer(int layer)
+    {
+        gameObject.layer = layer;
+    }
+
+    [ClientRpc]
+    public void RpcInitialize(bool facingUp, NetworkInstanceId container, string frontTextureName, string backTextureName)
+    {
+        GetComponent<Movement>().ContainerID = container;
         _frontTextureName = frontTextureName;
         _backTextureName = backTextureName;
         FacingUp = facingUp;

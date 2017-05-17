@@ -14,8 +14,7 @@ public class Spot : Entity, IContainer
     {
         GameObject deck = Instantiate(Resources.Load<GameObject>("Prefabs/Deck"), transform.position + new Vector3(0, 0.05f, 0), Quaternion.identity);
         NetworkServer.Spawn(deck);
-        deck.GetComponent<Deck>().Initialize(this, SpawnedDeckColor);
-        NetworkServer.Spawn(deck);
+        deck.GetComponent<Deck>().Initialize(this.netId, SpawnedDeckColor);
     }
 
 public bool AddEntity(Entity entity, Vector3 hitPos)
@@ -29,7 +28,7 @@ public bool AddEntity(Entity entity, Vector3 hitPos)
 
     public void RemoveEntity(Entity entity)
     {
-        entity.GetComponent<Movement>().Container = null;
+        entity.GetComponent<Movement>().ContainerID = new NetworkInstanceId();
         _entity = null;
     }
 

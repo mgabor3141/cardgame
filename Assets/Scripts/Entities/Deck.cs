@@ -28,9 +28,15 @@ public class Deck : Entity, IFlippable, IContainer
     public AutoFacingOptions AutoFacing { get; set; }
     public bool ForceFacing { get; set; }
 
-    public void Initialize(IContainer container, DeckColor deckColor)
+    [ClientRpc]
+    public void RpcSetContainer(NetworkInstanceId container)
     {
-        GetComponent<Movement>().Container = container;
+        GetComponent<Movement>().ContainerID = container;
+    }
+
+    public void Initialize(NetworkInstanceId container, DeckColor deckColor)
+    {
+        RpcSetContainer(container);
 
         string color;
 
@@ -102,21 +108,21 @@ public class Deck : Entity, IFlippable, IContainer
         CreateCard("queen_of_spades", color);
         CreateCard("red_joker", color);
 
-        Shuffle();
+        //Shuffle();
         UpdateDeck();
     }
 
     private void CreateCard(string cardname, string color)
     {
         GameObject newcard = Instantiate(Resources.Load<GameObject>("Prefabs/Card"), transform.position, Quaternion.identity);
-        newcard.layer = 9;
-        newcard.transform.parent = this.transform;
-        newcard.GetComponent<Card>().Initialize(false, this, cardname, color);
         NetworkServer.Spawn(newcard);
-        cards.Add(newcard.GetComponent<Card>());
+        newcard.GetComponent<Card>().RpcSetLayer(9);
+        newcard.GetComponent<Card>().RpcSetParent(netId);
+        newcard.GetComponent<Card>().RpcInitialize(false, netId, cardname, color);
+        RpcAddEntity(newcard.GetComponent<Card>().netId, new Vector3());
     }
 
-    public void Shuffle()
+    /*public void Shuffle()
     {
         // Fisher-Yates shuffle
         int n = cards.Count;
@@ -129,8 +135,13 @@ public class Deck : Entity, IFlippable, IContainer
             cards[n] = value;
         }
         UpdateDeck();
-    }
+    }*/
 
+    [ClientRpc]
+    public void RpcAddEntity(NetworkInstanceId entityId, Vector3 hitPos)
+    {
+        AddEntity(ClientScene.FindLocalObject(entityId).GetComponent<Entity>(), hitPos);
+    }
     public bool AddEntity(Entity entity, Vector3 hitPos)
     {
         if (entity.GetType() != typeof(Card))
@@ -143,6 +154,23 @@ public class Deck : Entity, IFlippable, IContainer
         return true;
     }
 
+    [ClientRpc]
+    public void RpcStartDrag()
+    {
+        Card cardToTake = cards[cards.Count - 1];
+        cards.RemoveAt(cards.Count - 1);
+
+        cardToTake.GetComponent<Movement>().ContainerID = new NetworkInstanceId();
+        cardToTake.transform.parent = null;
+
+        UpdateDeck();
+    }
+
+    [ClientRpc]
+    public void RpcRemoveEntity(NetworkInstanceId entityId, Vector3 hitPos)
+    {
+        RemoveEntity(ClientScene.FindLocalObject(entityId).GetComponent<Entity>());
+    }
     public void RemoveEntity(Entity entity)
     {
         Card card = (Card)entity;
@@ -178,14 +206,19 @@ public class Deck : Entity, IFlippable, IContainer
     // Event handlers
     public override void Click(Vector3 hitPos)
     {
-        Shuffle();
+        //Shuffle();
     }
 
     public override bool Drop(Entity entity, Vector3 hitPos)
     {
-        entity.gameObject.layer = 9;
-        entity.transform.parent = this.transform;
-        return AddEntity(entity, hitPos);
+        if (entity.GetType() != typeof(Card))
+            return false;
+
+        ((Card)entity).RpcSetLayer(9);
+        ((Card)entity).RpcSetParent(netId);
+
+        RpcAddEntity(entity.netId, hitPos);
+        return true;
     }
 
     public override Entity StartDelayedDrag(Vector3 hitPos)
@@ -193,17 +226,11 @@ public class Deck : Entity, IFlippable, IContainer
         GetComponent<Movement>().Container.RemoveEntity(this);
         return this;
     }
-
+    
     public override Entity StartDrag(Vector3 hitPos)
     {
-        Card card = cards[cards.Count - 1];
-        cards.RemoveAt(cards.Count - 1);
-
-        card.GetComponent<Movement>().Container = null;
-        card.transform.parent = null;
-
-        UpdateDeck();
-
+        Entity card = cards[cards.Count - 1];
+        RpcStartDrag();
         return card;
     }
 }

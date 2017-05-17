@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Networking;
 
 public class Table : Entity, IContainer {
     public int size = 1000;
@@ -8,6 +9,11 @@ public class Table : Entity, IContainer {
     public AutoFacingOptions AutoFacing { get; set; }
     public bool ForceFacing { get; set; }
 
+    [ClientRpc]
+    public void RpcAddEntity(NetworkInstanceId entityId, Vector3 hitPos)
+    {
+        AddEntity(ClientScene.FindLocalObject(entityId).GetComponent<Entity>(), hitPos);
+    }
     public bool AddEntity(Entity entity, Vector3 hitPos)
     {
         if (_entities.Count == size) return false;
@@ -36,6 +42,8 @@ public class Table : Entity, IContainer {
 
     public override bool Drop(Entity entity, Vector3 hitPos)
     {
-        return AddEntity(entity, hitPos);
+        if (_entities.Count == size) return false;
+        RpcAddEntity(entity.netId, hitPos);
+        return true;
     }
 }
