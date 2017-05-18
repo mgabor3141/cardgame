@@ -35,12 +35,6 @@ public class Card : Entity, IFlippable
     }
 
     [ClientRpc]
-    public void RpcSetLayer(int layer)
-    {
-        gameObject.layer = layer;
-    }
-
-    [ClientRpc]
     public void RpcInitialize(bool facingUp, NetworkInstanceId container, string frontTextureName, string backTextureName)
     {
         GetComponent<Movement>().ContainerID = container;

@@ -117,7 +117,7 @@ public class Deck : Entity, IFlippable, IContainer
     {
         GameObject newcard = Instantiate(Resources.Load<GameObject>("Prefabs/Card"), transform.position, Quaternion.identity);
         NetworkServer.Spawn(newcard);
-        newcard.GetComponent<Card>().RpcSetLayer(9);
+        newcard.GetComponent<Movement>().RpcSetLayer(9);
         newcard.GetComponent<Card>().RpcSetParent(netId);
         newcard.GetComponent<Card>().RpcInitialize(false, netId, cardname, color);
         RpcAddEntity(newcard.GetComponent<Card>().netId, new Vector3());
@@ -219,7 +219,7 @@ public class Deck : Entity, IFlippable, IContainer
     {
         if (DropAccepted(entity, hitPos))
         {
-            ((Card)entity).RpcSetLayer(9);
+            entity.GetComponent<Movement>().RpcSetLayer(9);
             ((Card)entity).RpcSetParent(netId);
 
             RpcAddEntity(entity.netId, hitPos);

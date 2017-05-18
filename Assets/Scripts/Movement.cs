@@ -81,6 +81,12 @@ public class Movement : NetworkBehaviour
         }
     }
 
+    [ClientRpc]
+    public void RpcSetLayer(int layer)
+    {
+        gameObject.layer = layer;
+    }
+
     public void Teleport(Vector3 position)
     {
         transform.position = position;

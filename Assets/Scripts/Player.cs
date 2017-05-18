@@ -10,7 +10,7 @@ public class Player : NetworkBehaviour
     private NetworkInstanceId grabbed = new NetworkInstanceId();
 
     private float elapsedTime = 0;
-    private Entity hovering = null; 
+    private Entity hovering = null;
 
     // In case of failure, we drop it back here
     private Vector3 startingMousePosition; // Screen space
@@ -70,7 +70,6 @@ public class Player : NetworkBehaviour
         if (Input.GetMouseButton(0) && grabbed.IsEmpty() && hits.Length > 0 &&
             (Input.mousePosition - startingMousePosition).magnitude > DRAG_START_DISTANCE)
         {
-
             RaycastHit hit = hits[0];
             CmdStartDrag(hit.point, gameObject, hit.collider.GetComponent<Entity>().netId);
             Entity target = hit.collider.GetComponent<Entity>().DragTarget(hit.point);
@@ -107,8 +106,6 @@ public class Player : NetworkBehaviour
         // We try from the topmost object, if nothing takes the object we put it back
         if (Input.GetMouseButtonUp(0) && !grabbed.IsEmpty() && hits.Length > 0)
         {
-            ClientScene.FindLocalObject(grabbed).gameObject.layer = 8;
-
             bool dropSuccess = false;
             foreach (RaycastHit hit in hits)
             {
@@ -170,6 +167,7 @@ public class Player : NetworkBehaviour
     [Command]
     private void CmdDrop(NetworkInstanceId netId, Vector3 hitPos, GameObject caller, NetworkInstanceId target)
     {
+        NetworkServer.FindLocalObject(netId).GetComponent<Movement>().RpcSetLayer(8);
         NetworkServer.FindLocalObject(target).GetComponent<Entity>().Drop(NetworkServer.FindLocalObject(netId).GetComponent<Entity>(), hitPos);
     }
 }
